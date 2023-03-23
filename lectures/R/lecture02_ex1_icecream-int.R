@@ -6,7 +6,7 @@
 library(ggplot2)
 
 #Quick version of Lecture 1####
-load("Data/icecream.RData")
+load("lectures/data/icecream.RData")
 ice.model <- lm(loss ~ weeks, data = ice.data)
 ice.summary <- summary(ice.model)
 

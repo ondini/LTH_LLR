@@ -14,7 +14,7 @@ library(ggplot2)
 # and your reports in a fourth.
 
 # Load and look at the data####
-load("Data/icecream.RData")
+load("lectures/data/icecream.RData")
 
 # Check what's in your environment:
 ls()
@@ -135,3 +135,4 @@ ggplot(ice.data, aes(x = weeks)) +
   labs(title = "Distribution of storage time") +
   labs(caption = "reason for the non-normal weight loss") +
   theme(text = element_text(size = 18))
+

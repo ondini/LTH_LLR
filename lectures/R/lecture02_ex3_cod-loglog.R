@@ -4,7 +4,7 @@
 library(ggplot2)
 
 ## Read in the data file####
-load("Data/cod.RData")
+load("lectures/data/cod.RData")
 
 ## Fit the loglog model####
 (cod.logmod <- lm(log(weight) ~ log(length), data = cod.data))
