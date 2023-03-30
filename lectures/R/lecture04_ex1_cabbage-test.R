@@ -29,7 +29,8 @@ sum.full$coefficients
 
 ## compare t-value with t-quantile####
 # upper alpha/2-t-quantile with df = 26:
-(tvalue <- sum.full$coefficients["fertilize", "t value"])
+(
+  tvalue <- sum.full$coefficients["fertilize", "t value"])
 qt(1 - 0.05/2, 26)
 
 ## calculate P-value####
