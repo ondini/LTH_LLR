@@ -31,7 +31,7 @@ plot.data <-
   theme(text = element_text(size = 18))
 
 (
-  plot.logfit <-plot.data + 
+  plot.linfit <-plot.data + 
     geom_line(aes(y = fit), color = "blue", linewidth = 1) +
     geom_ribbon(aes(ymin = conf.lwr, ymax = conf.upr), alpha = 0.2) +
     geom_line(aes(y = pred.lwr),
@@ -39,72 +39,72 @@ plot.data <-
     geom_line(aes(y = pred.upr),
               color = "red", linetype = "dashed", linewidth = 1) +
     xlab("Pressure (hPa)") +
-    ylab("log(Rain (mm))") +
-    labs(title = "Precipitations: log(Rain) vs Pressure") +
+    ylab("Rain (mm)") +
+    labs(title = "Precipitations: Rain vs Pressure") +
     labs(caption = 
-           "fitted loglin model and 95% conf. and pred. intervals") +
+           "fitted linlin model and 95% conf. and pred. intervals") +
     theme(text = element_text(size = 15))
 )
 
-# ggsave(filename = "project1/plots/logfitfull.png", plot = plot.logfitfull)
+# ggsave(filename = "project1/plots/linfitfull.png", plot = plot.linfitfull)
 
 ### Add and plot the residuals to the predicted data ####
-model.pred$e.log <- model$residuals
+model.pred$e.lin <- model$residuals
 head(model.pred)
 
-(max.elog <- max(abs(model.pred$e.log)))
-(pb.lim.elog <- c(-max.elog, max.elog))
+(max.elin <- max(abs(model.pred$e.lin)))
+(pb.lim.elin <- c(-max.elin, max.elin))
 
 #### Plot against x ####
 ( 
-  plot.logresx <- ggplot(data = model.pred, aes(x = pressure, y = e.log)) +
+  plot.linresx <- ggplot(data = model.pred, aes(x = pressure, y = e.lin)) +
     geom_point() +
     geom_hline(yintercept = 0) +
     geom_smooth() +
-    expand_limits(y = pb.lim.elog) +
+    expand_limits(y = pb.lim.elin) +
     xlab("Pressure (hPa)") +
     ylab("Residual") +
     labs(title = "Residuals vs x-values") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/logresx.png", plot = plot.logresx)
+# ggsave(filename = "project1/plots/linresx.png", plot = plot.linresx)
 
 #### Plot against yhat ####
 (
-  plot.logresy <- ggplot(data = model.pred, aes(x = fit, y = e.log)) +
+  plot.linresy <- ggplot(data = model.pred, aes(x = fit, y = e.lin)) +
     geom_point() +
     geom_hline(yintercept = 0) +
     geom_smooth() +
-    expand_limits(y = pb.lim.elog) +
-    xlab("Predicted log(Rain(mm))") +
+    expand_limits(y = pb.lim.elin) +
+    xlab("Predicted Rain(mm)") +
     ylab("Residual") +
     labs(title = "Residuals vs predicted values Y-hat") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/logresy.png", plot = plot.logresy)
+# ggsave(filename = "project1/plots/linresy.png", plot = plot.linresy)
 
 #### Normal qq-plot####
 (
-  plot.logqq <- ggplot(data = model.pred, aes(sample = e.log)) +
+  plot.linqq <- ggplot(data = model.pred, aes(sample = e.lin)) +
     geom_qq() + geom_qq_line() +
     labs(title = "Normal Q-Q-plot of the residuals") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/logqq.png", plot = plot.logqq)
+# ggsave(filename = "project1/plots/linqq.png", plot = plot.linqq)
 
 #### Histogram####
 (
-  plot.loghist <-ggplot(data = model.pred, aes(x = e.log)) +
+  plot.linhist <-ggplot(data = model.pred, aes(x = e.lin)) +
     geom_histogram(bins = 20) +
     xlab("Residuals") +
     labs(title = "Histogram of residuals") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/loghist.png", plot = plot.loghist)
+# ggsave(filename = "project1/plots/linhist.png", plot = plot.linhist)
 
 
 ## Fit the loglin model ####
@@ -240,11 +240,11 @@ ggsave(filename = "project1/plots/loghist.png", plot = plot.loghist)
 (cbrtmod <- lm(I(rain^(1/3)) ~ pressure, data = weather))
 (cbrtmod.sum <- summary(cbrtmod))
 
-linmod.sum$coefficients
-confint(linmod)
+cbrtmod.sum$coefficients
+confint(cbrtmod)
 
 
-model = logmod
+model = cbrtmod
 model.pred <- 
   cbind(weather,
         fit = predict(model),
@@ -262,7 +262,7 @@ plot.data <-
   theme(text = element_text(size = 18))
 
 (
-  plot.logfit <-plot.data + 
+  plot.cbrtfit <-plot.data + 
     geom_line(aes(y = fit), color = "blue", linewidth = 1) +
     geom_ribbon(aes(ymin = conf.lwr, ymax = conf.upr), alpha = 0.2) +
     geom_line(aes(y = pred.lwr),
@@ -270,14 +270,14 @@ plot.data <-
     geom_line(aes(y = pred.upr),
               color = "red", linetype = "dashed", linewidth = 1) +
     xlab("Pressure (hPa)") +
-    ylab("log(Rain (mm))") +
-    labs(title = "Precipitations: log(Rain) vs Pressure") +
+    ylab("cbrt(Rain (mm))") +
+    labs(title = "Precipitations: cbrt(Rain) vs Pressure") +
     labs(caption = 
-           "fitted loglin model and 95% conf. and pred. intervals") +
+           "fitted cbrtlin model and 95% conf. and pred. intervals") +
     theme(text = element_text(size = 15))
 )
 
-# ggsave(filename = "project1/plots/logfit.png", plot = plot.logfit)
+# ggsave(filename = "project1/plots/cbrtfit.png", plot = plot.cbrtfit)
 
 ### Plot the fitted model in orig data ####
 plot.data <- 
@@ -286,7 +286,7 @@ plot.data <-
   theme(text = element_text(size = 18))
 
 (
-  plot.logfitfull <- plot.data +
+  plot.cbrtfitfull <- plot.data +
     geom_line(aes(y = I((fit)^3)),
               color = "blue", linewidth = 1) +
     geom_ribbon(aes(ymin = I((conf.lwr)^3), 
@@ -300,69 +300,69 @@ plot.data <-
     ylab("Rain (mm)") +
     labs(title = "Precipitations: Rain vs Pressure") +
     labs(caption = 
-           "fitted loglin model and 95% conf. and pred. intervals") +
+           "fitted cbrtlin model and 95% conf. and pred. intervals") +
     theme(text = element_text(size = 15))
 )
 
 
-# ggsave(filename = "project1/plots/logfitfull.png", plot = plot.logfitfull)
+# ggsave(filename = "project1/plots/cbrtfitfull.png", plot = plot.cbrtfitfull)
 
 ### Add and plot the residuals to the predicted data ####
-model.pred$e.log <- model$residuals
+model.pred$e.cbrt <- model$residuals
 head(model.pred)
 
-(max.elog <- max(abs(model.pred$e.log)))
-(pb.lim.elog <- c(-max.elog, max.elog))
+(max.ecbrt <- max(abs(model.pred$e.cbrt)))
+(pb.lim.ecbrt <- c(-max.ecbrt, max.ecbrt))
 
 #### Plot against x ####
 ( 
-  plot.logresx <- ggplot(data = model.pred, aes(x = pressure, y = e.log)) +
+  plot.cbrtresx <- ggplot(data = model.pred, aes(x = pressure, y = e.cbrt)) +
     geom_point() +
     geom_hline(yintercept = 0) +
     geom_smooth() +
-    expand_limits(y = pb.lim.elog) +
+    expand_limits(y = pb.lim.ecbrt) +
     xlab("Pressure (hPa)") +
     ylab("Residual") +
     labs(title = "Residuals vs x-values") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/logresx.png", plot = plot.logresx)
+# ggsave(filename = "project1/plots/cbrtresx.png", plot = plot.cbrtresx)
 
 #### Plot against yhat ####
 (
-  plot.logresy <- ggplot(data = model.pred, aes(x = fit, y = e.log)) +
+  plot.cbrtresy <- ggplot(data = model.pred, aes(x = fit, y = e.cbrt)) +
     geom_point() +
     geom_hline(yintercept = 0) +
     geom_smooth() +
-    expand_limits(y = pb.lim.elog) +
-    xlab("Predicted log(Rain(mm))") +
+    expand_limits(y = pb.lim.ecbrt) +
+    xlab("Predicted cbrt(Rain(mm))") +
     ylab("Residual") +
     labs(title = "Residuals vs predicted values Y-hat") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/logresy.png", plot = plot.logresy)
+# ggsave(filename = "project1/plots/cbrtresy.png", plot = plot.cbrtresy)
 
 #### Normal qq-plot####
 (
-  plot.logqq <- ggplot(data = model.pred, aes(sample = e.log)) +
+  plot.cbrtqq <- ggplot(data = model.pred, aes(sample = e.cbrt)) +
     geom_qq() + geom_qq_line() +
     labs(title = "Normal Q-Q-plot of the residuals") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/logqq.png", plot = plot.logqq)
+# ggsave(filename = "project1/plots/cbrtqq.png", plot = plot.cbrtqq)
 
 #### Histogram####
 (
-  plot.loghist <-ggplot(data = model.pred, aes(x = e.log)) +
+  plot.cbrthist <-ggplot(data = model.pred, aes(x = e.cbrt)) +
     geom_histogram(bins = 20) +
     xlab("Residuals") +
     labs(title = "Histogram of residuals") +
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/loghist.png", plot = plot.loghist)
+# ggsave(filename = "project1/plots/cbrthist.png", plot = plot.cbrthist)
 
 
