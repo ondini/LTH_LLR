@@ -62,11 +62,9 @@ model.y0.pred <- cbind(model.x0,
 model.y0.pred$conf.fit <- model.y0.pred$pred.fit <- NULL
 exp(model.y0.pred)
 
-
 # get rid of the extra fits
 model.pred$conf.fit <- model.pred$pred.fit <- NULL
 head(model.pred)
-
 
 ## Add and plot the residuals to the predicted data ####
 model.pred$e <- model.y$residuals

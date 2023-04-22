@@ -3,7 +3,7 @@
 
 library(ggplot2)
 
-load("Data/pike.rda")
+load("lectures/data/pike.rda")
 summary(pike)
 
 # 478 cm !?
@@ -232,3 +232,4 @@ ggplot(pike.exc.pred, aes(x = fit, y = df1)) +
        subtitle = "without the strange fish") +
   labs(caption = "y = sqrt(F_0.5) and 2/sqrt(n)") +
   theme(text = element_text(size = 18))
+

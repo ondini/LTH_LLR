@@ -1,14 +1,14 @@
 # import packages
 library(ggplot2)
 
-# useful function
+# fuseful function for better dataloading
 loadRData <- function(fileName){
   #loads an RData file, and returns it
   load(fileName)
   get(ls()[ls() != "fileName"])
 }
 
-# 2.A ####
+# 3.A ####
 ## Load and look at the data ####
 pb <- loadRData("lab2/data/Pb_all.rda")
 
@@ -19,226 +19,191 @@ summary(pb)
 length(unique(pb$region))
 table(pb$region)
 
-## Fit a log-lin model ####
-model.y <- lm(log(Pb) ~  I(year-1975), data = pb)
-(sum.full <- summary(model.y))
+## Fit a lin-lin and log-lin model without region ####
+mod_1 <- lm(Pb ~  I(year-1975), data = pb)
+(sum_1 <- summary(mod_1))
 
-## Intervals for the all x####
-model.pred <- 
+mod_2 <- lm(log(Pb) ~  I(year-1975), data = pb)
+(sum_2 <- summary(mod_2))
+
+
+## Get preds. and intervals for both models####
+mod_1.pred <- 
   cbind(pb, 
-        fit = predict(model.y),
-        conf = predict(model.y, interval = "confidence"),
-        pred = predict(model.y, interval = "prediction"))
-head(model.pred)
+        fit = predict(mod_1),
+        conf = predict(mod_1, interval = "confidence"),
+        pred = predict(mod_1, interval = "prediction"))
 
-## Plot the fitted model ####
-
-(
-  plot.data <- 
-    ggplot(data = model.pred, aes(x = year, y = Pb)) + 
-    geom_point(aes(color = region), size = 3)+
-    theme(text = element_text(size = 18))
-)
-
-plot.data +
-  geom_line(aes(y = exp(fit)),
-            color = "blue", linewidth = 1) +
-  geom_ribbon(aes(ymin = exp(conf.lwr), 
-                  ymax = exp(conf.upr)),
-              alpha = 0.2) +
-  geom_line(aes(y = exp(pred.lwr)),
-            color = "red", linetype = "dashed", linewidth = 1) +
-  geom_line(aes(y = exp(pred.upr)),
-            color = "red", linetype = "dashed", linewidth = 1) 
+mod_2.pred <- 
+  cbind(pb, 
+        fit = predict(mod_2),
+        conf = predict(mod_2, interval = "confidence"),
+        pred = predict(mod_2, interval = "prediction"))
 
 
-## Predict a single value ####
+## Get leverages (influences) for models####
+mod_1.pred$v <- influence(mod_1)$hat
+head(mod_1.pred)
 
-(model.x0 <- data.frame(year = c(2002)))
-model.y0.pred <- cbind(model.x0,
-                     fit = predict(model.y, model.x0),
-                     conf = predict(model.y, model.x0, interval = "confidence"),
-                     pred = predict(model.y, model.x0, interval = "prediction"))
-model.y0.pred$conf.fit <- model.y0.pred$pred.fit <- NULL
-exp(model.y0.pred)
+mod_2.pred$v <- influence(mod_2)$hat
+head(mod_2.pred)
 
 
-# get rid of the extra fits
-model.pred$conf.fit <- model.pred$pred.fit <- NULL
-head(model.pred)
+###  Plot them with 1/n and 2(p+1)/n horizontal lines ####
+# print p+1 for both models and n
+length(mod_1$coefficients)
+length(mod_2$coefficients)
+nrow(pb)
 
+ggplot(cbind(mod_1.pred), aes(x = year, y = v)) +
+  geom_jitter(width = 1)+
+  geom_hline(yintercept = 1/nrow(pb)) +
+  geom_hline(yintercept = 2*length(mod_1$coefficients)/nrow(pb), 
+             color = "red") +
+  labs(caption = "y = 1/n (black) and 2(p+1)/n (red)") +
+  theme(text = element_text(size = 18))
 
-## Add and plot the residuals to the predicted data ####
-model.pred$e <- model.y$residuals
-head(model.pred)
+ggplot(cbind(mod_2.pred), aes(x = year, y = v)) +
+  geom_jitter(width = 1) +
+  geom_hline(yintercept = 1/nrow(pb)) +
+  geom_hline(yintercept = 2*length(mod_2$coefficients)/nrow(pb), 
+             color = "red") +
+  labs(caption = "y = 1/n (black) and 2(p+1)/n (red)") +
+  theme(text = element_text(size = 18))
 
-# Save the max-value in order to make the y-axis symmetrical 
-# in the plots.
-(max.e <- max(abs(model.pred$e)))
-(model.elims <- c(-max.e, max.e))
+## Get mean of year####
+mean(mod_1.pred$year)
 
-### Plot against x####
-ggplot( data = model.pred, 
-        aes(x = year, y = e)) +
-  geom_point(size = 3) +
-  geom_hline(yintercept = 0) +
-  expand_limits(y = model.elims) +
-  ylab("Residual") +
-  labs(title = "Residuals vs x-values") +
-  theme(text = element_text(size = 18)
-  ) +
-facet_wrap(~ region) 
-
-### Plot against yhat####
-ggplot(data = model.pred, aes(x = fit, y = e)) +
-  geom_point(size = 3) +
-  geom_hline(yintercept = 0) +
-  expand_limits(y = model.elims) +
-  ylab("Residual") +
-  labs(title = "Residuals vs predicted values Y-hat") +
-  theme(text = element_text(size = 18)) +
-  facet_wrap(~ region) 
-
-### Normal qq-plot####
-ggplot(data = model.pred, aes(sample = e)) +
-  geom_qq(size = 3) +
-  geom_qq_line() +
-  labs(tag = "C") +
-  labs(title = "Normal Q-Q-plot of the residuals") +
-  theme(text = element_text(size = 18)) +
-  facet_wrap(~ region) 
-
-### Residuals histogram####
-ggplot(data = model.pred, aes(x = e)) +
-  geom_histogram(bins = 10) +
-  xlab("Residuals") +
-  labs(title = "Histogram of residuals") +
-  theme(text = element_text(size = 18))+
-  facet_wrap(~ region) 
-
-
-# 2.B ####
-
-## Show dirstributions by regions ####
-
-ggplot(data = pb, aes(x = year, y = Pb)) + 
-  geom_point() + 
-  facet_wrap(~ region) 
-
-ggplot(data = pb, aes(x = year, y = log(Pb))) + 
-  geom_point() + 
-  facet_wrap(~ region) 
-
-
-pb.logsum$coefficients
-confint(pb.logmod)
-
-## Fit (and refit) the log-lin model ####
-model.f <- lm(log(Pb) ~  I(year-1975) + region, data = pb)
-(sum.s <- summary(model.f))
-
-# show region frequency  
-table(pb$region)
-# not a good idea to use Orebro as reference, since Norr. is the most freq. one 
+## Fit model with regions, Vasternorrland as reference ####
 pb$region <- relevel(pb$region, "Vasternorrland")
-model.f <- lm(log(Pb) ~  I(year-1975) + region, data = pb)
-(sum.s <- summary(model.f))
-
-## Get coeff. data ### 
-exp(sum.s$coefficients)
-exp(confint(model.f))
-
-## Predicted single value with intervals ####
-(model.f.x0 <- data.frame(year = c(2002), region="Vasternorrland"))
-model.f.y0.pred <- cbind(model.f.x0,
-                     fit = predict(model.f, model.f.x0),
-                     conf = predict(model.f, model.f.x0, interval = "confidence"),
-                     pred = predict(model.f, model.f.x0, interval = "prediction"))
-model.f.y0.pred$conf.fit<- model.f.y0.pred$region  <- model.f.y0.pred$pred.fit <- NULL
-exp(model.f.y0.pred)
-
-(model.f.x0 <- data.frame(year = c(1975), region="Orebro"))
-model.f.y0.pred <- cbind(model.f.x0,
-                         fit = predict(model.f, model.f.x0),
-                         conf = predict(model.f, model.f.x0, interval = "confidence"),
-                         pred = predict(model.f, model.f.x0, interval = "prediction"))
-model.f.y0.pred$conf.fit<- model.f.y0.pred$region  <- model.f.y0.pred$pred.fit <- NULL
-exp(model.f.y0.pred)
-
-(model.f.x0 <- data.frame(year = c(2002), region="Orebro"))
-model.f.y0.pred <- cbind(model.f.x0,
-                         fit = predict(model.f, model.f.x0),
-                         conf = predict(model.f, model.f.x0, interval = "confidence"),
-                         pred = predict(model.f, model.f.x0, interval = "prediction"))
-model.f.y0.pred$conf.fit<- model.f.y0.pred$region  <- model.f.y0.pred$pred.fit <- NULL
-exp(model.f.y0.pred)
-
-#  2.C ####
-
-## Fit the model ####
-model.f <- lm(log(Pb) ~  I(year-1975) + region, data = pb)
-(sum.s <- summary(model.f))
-
-sum.s$coefficients
-
-model.r <- lm(log(Pb) ~  I(year-1975), data = pb)
-(model.anova <- anova(model.r, model.f))
-
-## PErform the partial F-Statistics ####
-### Compare the F-value with upper F-quantile####
-(Fvalue <- model.anova$F[2])
-qf(1 - 0.05, 4, 1225)
-
-### Calculate P-value####
-pf(Fvalue, 4, 1225, lower.tail = FALSE)
-model.anova$`Pr(>F)`[2]
+mod_3 <- lm(log(Pb) ~  I(year-1975) + region, data = pb)
+(sum_3 <- summary(mod_3))
 
 
-## Add and plot the residuals to the predicted data ####
-model.pred$e <- model.f$residuals
-head(model.pred)
+## Get preds. and intervals and leverage for the model ####
+mod_3.pred <- 
+  cbind(pb, 
+        fit = predict(mod_3),
+        conf = predict(mod_3, interval = "confidence"),
+        pred = predict(mod_3, interval = "prediction"))
 
-# Save the max-value in order to make the y-axis symmetrical 
-# in the plots.
-(max.e <- max(abs(model.pred$e)))
-(model.elims <- c(-max.e, max.e))
+mod_3.pred$v <- influence(mod_3)$hat
+head(mod_3.pred)
 
-### Plot against x####
-ggplot( data = model.pred, 
-        aes(x = year, y = e)) +
+length(mod_3$coefficients)
+nrow(pb)
+
+### Plot the leverages ####
+ggplot(cbind(mod_3.pred), aes(x = year, y = v)) +
+  geom_jitter(width = 1, aes(color = region))+
+  geom_hline(yintercept = 1/nrow(pb)) +
+  geom_hline(yintercept = 2*length(mod_3$coefficients)/nrow(pb), 
+             color = "red") +
+  labs(caption = "y = 1/n (black) and 2(p+1)/n (red)") +
+  theme(text = element_text(size = 18))
+
+## Compute studentized residuals ####
+mod_3.pred$r <- rstudent(mod_3)
+
+### Plot r* against yhat ####
+
+ggplot(mod_3.pred, aes(x = fit, y = r)) +
   geom_point(size = 3) +
   geom_hline(yintercept = 0) +
-  expand_limits(y = model.elims) +
-  ylab("Residual") +
-  labs(title = "Residuals vs x-values") +
-  theme(text = element_text(size = 18)
-  ) +
-  facet_wrap(~ region) 
+  geom_hline(yintercept = c(-2, 2)) +
+  geom_hline(yintercept = c(-3, 3), linetype = "dashed") +
+  geom_smooth() +
+  xlab("Fitted values") +
+  ylab("r*") +
+  labs(caption = "y = +/- 2 and +/- 3") +
+  theme(text = element_text(size = 18))
 
-### Plot against yhat####
-ggplot(data = model.pred, aes(x = fit, y = e)) +
+# Get number of large residuals
+sum(abs(mod_3.pred$r)>3)
+
+### Plot r* against yhat by regions####
+
+ggplot(mod_3.pred, aes(x = fit, y = r)) +
   geom_point(size = 3) +
   geom_hline(yintercept = 0) +
-  expand_limits(y = model.elims) +
-  ylab("Residual") +
-  labs(title = "Residuals vs predicted values Y-hat") +
+  geom_hline(yintercept = c(-2, 2)) +
+  geom_hline(yintercept = c(-3, 3), linetype = "dashed") +
+  geom_smooth() +
+  xlab("Fitted values") +
+  ylab("r*") +
+  labs(caption = "y = +/- 2 and +/- 3") +
   theme(text = element_text(size = 18)) +
   facet_wrap(~ region) 
 
-### Normal qq-plot####
-ggplot(data = model.pred, aes(sample = e)) +
-  geom_qq(size = 3) +
-  geom_qq_line() +
-  labs(tag = "C") +
-  labs(title = "Normal Q-Q-plot of the residuals") +
+## Compute cook's distance ####
+mod_3.pred$D <- cooks.distance(mod_3)
+
+### Plot cook's distance against year ####
+(f1.exc <- length(mod_3$coefficients))
+(f2.exc <- mod_3$df.residual)
+(cook.limit.exc <- qf(0.5, f1.exc, f2.exc))
+
+ggplot(mod_3.pred, aes(fit, D)) + 
+  geom_point(size = 3) +
+  # geom_hline(yintercept = cook.limit.exc, color = "red") +
+  geom_hline(yintercept = 4/nrow(mod_3.pred), linetype = 2, color = "red") +
+  xlab("Fitted values") +
+  ylab("D_i") +
+  labs(title = "Pike: Cook's D",
+       subtitle = "without the strange fish") +
+  labs(caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)") +
   theme(text = element_text(size = 18)) +
   facet_wrap(~ region) 
 
-### Residuals histogram####
-ggplot(data = model.pred, aes(x = e)) +
-  geom_histogram(bins = 10) +
-  xlab("Residuals") +
-  labs(title = "Histogram of residuals") +
-  theme(text = element_text(size = 18))+
+## Compute DFBETAS for time####
+head(dfbetas(mod_3))
+mod_3.pred$dbf <- dfbetas(mod_3)[, "I(year - 1975)"]
+
+### Plot dfbetas(time) vs yhat by regions ####
+ggplot(mod_3.pred, aes(x = fit, y = dbf)) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 0) +
+  # geom_hline(yintercept = sqrt(cook.limit.exc)*c(-1, 1), color = "red") +
+  geom_hline(yintercept = 2/sqrt(nrow(mod_3.pred))*c(-1, 1), color = "red", linetype = "dashed") +
+  ylab("DFBETAS_0(i)") +
+  xlab("Fitted values") +
+  labs(title = "Pike: DFBETAS_0: impact on the intercept",
+       subtitle = "without the strange fish") +
+  labs(caption = "y = sqrt(F_0.5) and 2/sqrt(n)") +
+  theme(text = element_text(size = 18)) + 
   facet_wrap(~ region) 
 
+# 3.B ####
+## Fit the product model ####
+
+mod_4 <- lm(log(Pb) ~  I(year-1975) * region, data = pb)
+(sum_4 <- summary(mod_4))
+
+## Compare to prev model using partial F-test ####
+
+(pf34 <- anova(mod_3, mod_4))
+
+# Compare the F-value with upper F-quantile
+(Fvalue <- pf34$F[2])
+qf(1 - 0.05, 4, 1221)
+
+# Get P-value
+pf(Fvalue, 4, 1221, lower.tail = FALSE)
+pf34$`Pr(>F)`[2]
+
+## Get R^2, adjR^2, BIC and AIC for all models ####
+
+sum_2$r.squared
+sum_2$adj.r.squared
+AIC(mod_2)
+BIC(mod_2)
+
+sum_3$r.squared
+sum_3$adj.r.squared
+AIC(mod_3)
+BIC(mod_3)
+
+sum_4$r.squared
+sum_4$adj.r.squared
+AIC(mod_4)
+BIC(mod_4)

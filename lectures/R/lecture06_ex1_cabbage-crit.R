@@ -85,7 +85,7 @@ ggplot(collect.R2s, aes(model, R2)) +
 ggplot(collect.AIC, aes(model, AIC)) +
   geom_point(size = 3) + 
   geom_point(aes(y = BIC), color = "red", size = 3) + 
-  geom_line(aes(x = nr), lineiwidth = 1) +
+  geom_line(aes(x = nr), linewidth = 1) +
   geom_line(aes(x = nr, y = BIC), 
             color = "red", linewidth = 1, linetype = "dashed") +
   labs(caption = "AIC (black), BIC (red dashed)") +

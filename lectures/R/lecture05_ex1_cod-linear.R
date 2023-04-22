@@ -5,7 +5,7 @@
 # Activate the ggplot-commands:
 library(ggplot2)
 
-load("Data/cod.RData")
+load("./lectures/data/cod.RData")
 
 #Linear model####
 cod.linmod <- lm(weight ~ length, data = cod.data)
