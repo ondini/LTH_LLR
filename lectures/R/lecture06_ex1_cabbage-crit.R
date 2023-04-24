@@ -216,3 +216,4 @@ step(model.1,
      scope = list(lower = model.0, upper = model.4),
      direction = "both",
      k = log(nrow(cabbage)))
+

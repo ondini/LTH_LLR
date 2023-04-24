@@ -1,6 +1,6 @@
 library(ggplot2)
 
-# 1.A ####
+# Part 1 of project 1 ####
 
 ## Load the data ####
 weather <- read.csv("project1/data/weather.csv")
@@ -31,7 +31,7 @@ plot.data <-
   theme(text = element_text(size = 18))
 
 (
-  plot.linfit <-plot.data + 
+  plot.linfit <- plot.data + 
     geom_line(aes(y = fit), color = "blue", linewidth = 1) +
     geom_ribbon(aes(ymin = conf.lwr, ymax = conf.upr), alpha = 0.2) +
     geom_line(aes(y = pred.lwr),

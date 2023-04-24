@@ -5,7 +5,7 @@
 # Activate the ggplot-commands:
 library(ggplot2)
 
-load("./lectures/data/cod.RData")
+load("lectures/data/cod.RData")
 
 #Linear model####
 cod.linmod <- lm(weight ~ length, data = cod.data)
@@ -77,3 +77,4 @@ ggplot(data = cod.data, aes(x = fit.log, y = sqrt(abs(r.log)))) +
   labs(title = "Constant variance?",
        caption = "0.82, sqrt(2), sqrt(3)") +
   theme(text = element_text(size = 18))
+
