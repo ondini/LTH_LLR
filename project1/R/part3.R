@@ -193,5 +193,5 @@ ggsave(filename = "project1/plots/rdatabic.png", plot = plot.rdatabic)
     theme(text = element_text(size = 18))
 )
 
-ggsave(filename = "project1/plots/rsdata.png", plot = plot.rsdatabic)
+ggsave(filename = "project1/plots/rsdatabitc.png", plot = plot.rsdatabic)
 

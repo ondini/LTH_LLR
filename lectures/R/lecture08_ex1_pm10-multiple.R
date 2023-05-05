@@ -5,7 +5,7 @@
 library(ggplot2)
 #library(MASS)
 
-load("Data/pm10.rda")
+load("lectures/data/pm10.rda")
 head(pm10)
 summary(pm10)
 

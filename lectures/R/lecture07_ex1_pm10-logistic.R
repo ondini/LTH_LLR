@@ -3,12 +3,12 @@
 # Logistic regression####
 # estimates and confidence intervals
 
-library(ggplot2)
+    library(ggplot2)
 #Requires library MASS installed but not necessarily activated.
 #library(MASS)
 
 ##pm10-data####
-load("Data/pm10.rda")
+load("lectures/data/pm10.rda")
 head(pm10)
 # Some extra variables used in lecture 8.
 
@@ -55,7 +55,7 @@ bhat <- model.1$coefficients
 se.b <- summary(model.1)$coefficients[, "Std. Error"]
 (ci.wald <- cbind(lo = bhat - 1.96*se.b, hi = bhat + 1.96*se.b))
 #Small difference between the versions due to large data set.
-
+summary(model.1)
 # Odds and Odds Ratio####
 # exp(beta0), exp(beta1)
 exp(model.1$coefficients)

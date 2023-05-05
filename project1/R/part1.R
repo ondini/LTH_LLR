@@ -68,7 +68,7 @@ head(model.pred)
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/linresx.png", plot = plot.linresx)
+ggsave(filename = "project1/plots/linresx.png", plot = plot.linresx)
 
 #### Plot against yhat ####
 (
@@ -83,7 +83,7 @@ head(model.pred)
     theme(text = element_text(size = 18))
 )
 
-# ggsave(filename = "project1/plots/linresy.png", plot = plot.linresy)
+ggsave(filename = "project1/plots/linresy.png", plot = plot.linresy)
 
 #### Normal qq-plot####
 (
