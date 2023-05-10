@@ -1,6 +1,9 @@
-library(ggplot2)
 
-# Part 2 of project 2 ####
+library(ggplot2)
+library(pROC)
+library(ResourceSelection)
+
+# Part 3 of project 2 ####
 
 ## Load the data ####
 weather <- read.csv("project2/data/weather.csv")
@@ -31,327 +34,146 @@ bwmodel <- step(fullmod, scope = list(lower=nullmod,upper=fullmod),
 
 model.sum <- summary(fwmodel)
 
-# #AIC and BIC####
-aic <- AIC(nullmod, fwmodel, bwmodel)
-bic <- BIC(nullmod, fwmodel, bwmodel)
-(collect.AIC <- data.frame(aic, bic))
-
-# model 3: with cars and zerodiff is the best (BIC)
-
-# Pseudo R2####
-# Null model: ln L(b0)
-logLik(nullmod)
-(lnL0 <- logLik(nullmod)[1])
-
-(R2CS.max <- 1 - (exp(lnL0))^(2/nrow(weather)))
-# Collect the log likelihoods L(betahat)
-collect.AIC$loglik <- 
-  c(logLik(nullmod)[1],
-    logLik(fwmodel)[1],
-    logLik(bwmodel)[1])
-##R2_McF####
-collect.AIC$R2McF <- 1 - collect.AIC$loglik/lnL0
-##R2_McF,adj.####
-# Note that p+1 = df (and df.1):
-( collect.AIC$R2McF.adj <- 1 - (collect.AIC$loglik - (collect.AIC$df - 1)/2)/lnL0 )
 
 
-
-## Cook's distance####
-
-weather.pred <- cbind(
+## Make confusion matrix ####
+pred.phat <- cbind(
   weather,
-  phat = predict(bwmodel),
-  xb = predict(bwmodel),
-  v = influence(bwmodel)$hat
+  p.1 = predict(mod_1, type = "response"),
+  p.2 = predict(mod_2, type = "response"),
+  p.fw = predict(fwmodel, type = "response"),
+  p.bw = predict(bwmodel, type = "response")
 )
 
-weather.pred$Dcook <- cooks.distance(bwmodel)
-head(weather.pred)
+pred.phat$yhat <- as.numeric(pred.phat$p.bw > 0.5)
 
-(
-  plt.cook <- ggplot(weather.pred, aes(xb, Dcook, color = low_cat)) +
-    geom_point() +
-    geom_hline(yintercept = 4/nrow(weather), linetype = "dotted",
-               size = 1) +
-    labs(title = "Cook's distance vs linear predictor, by lowrain",
-         color = "Y", 
-         caption = "4/n in black, high leverage highlighted") +
-    xlab("Linear predictor") +
-    ylab("Cook's distance") +
-    theme(text = element_text(size = 14)) 
-)
+head(pred.phat)
 
-ggsave(filename = "project2/plots/mod2abw_cook.png", plot = plt.cook)
+(row.01 <- table(weather$lowrain))
+(col.01 <- table(pred.phat$yhat))
+(confusion <- table(pred.phat$lowrain, pred.phat$yhat))
+(spec <- confusion[1, 1] / row.01[1])
+(sens <- confusion[2, 2] / row.01[2])
+(accu <- sum(diag(confusion)) / sum(confusion))
+(prec <- confusion[2, 2] / col.01[2])
 
+## Plot the ROC curves ####
 
+# ROC-curves for all models####
+roc.1 <- roc(lowrain ~ p.1, data = pred.phat)
+roc.df.1 <- coords(roc.1, transpose = FALSE)
+roc.df.1$model <- "1c"
+roc.2 <- roc(lowrain ~ p.2, data = pred.phat)
+roc.df.2 <- coords(roc.2, transpose = FALSE)
+roc.df.2$model <- "1d"
+roc.fw <- roc(lowrain ~ p.fw, data = pred.phat)
+roc.df.fw <- coords(roc.fw, transpose = FALSE)
+roc.df.fw$model <- "fw"
+roc.bw <- roc(lowrain ~ p.bw, data = pred.phat)
+roc.df.bw<- coords(roc.bw, transpose = FALSE)
+roc.df.bw$model <- "bw"
 
-## Deviance residuals, standardised####
-weather.pred$devres <- influence(bwmodel)$dev.res
-weather.pred$devstd <- weather.pred$devres/sqrt(1 - weather.pred$v)
-head(weather.pred)
+roc.df <- rbind(roc.df.1, roc.df.2, roc.df.fw, roc.df.bw)
 
-ggplot(weather.pred, aes(xb, devstd, color = low_cat)) +
-  geom_point() +
-  geom_hline(yintercept = 0) +
-  geom_hline(yintercept = c(-2, 2), linetype = "dashed", size = 1) +
-  geom_hline(yintercept = c(-3, 3), linetype = "dotted", size = 1) +
-  labs(title = "Standardized deviance residuals vs linear predictor",
-       color = "Y") +
-  theme(text = element_text(size = 14))
-
-## Get highest cook distance for lowrain and highrain ####
-weather.lowrains <- weather.pred[weather.pred$low_cat == 'low',]
-
-low_max.D <- which.max(weather.lowrains$Dcook)
-weather.lowrains[low_max.D, ]
-
-weather.highrains <- weather.pred[weather.pred$low_cat == 'high',]
-
-high_max.D <- which.max(weather.highrains$Dcook)
-weather.highrains[high_max.D, ]
-
-
-(
-  plt.cookM <- ggplot(weather.pred, aes(xb, Dcook, color = low_cat)) +
-    geom_point() +
-    geom_hline(yintercept = 4/nrow(weather), linetype = "dotted",
-               size = 1) +
-    geom_point(data = weather.lowrains[low_max.D, ], 
-               color = "black", size = 4, shape = 24) +
-    geom_point(data = weather.highrains[high_max.D, ], 
-               color = "black", size = 4, shape = 23) +
-    labs(title = "Cook's distance vs linear predictor, by lowrain",
-         color = "Y", 
-         caption = "4/n in black, high leverage highlighted") +
-    xlab("Linear predictor") +
-    ylab("Cook's distance") +
-    theme(text = element_text(size = 14)) 
-)
-
-ggsave(filename = "project2/plots/mod2abw_cookM.png", plot = plt.cookM)
-
-## Mark the highest CookD in the deviance plot ####
-
-(
-  plt.devstd <-
-ggplot(weather.pred, aes(xb, devstd, color = low_cat)) +
-  geom_point() +
-  geom_hline(yintercept = 0) +
-  geom_point(data = weather.lowrains[low_max.D, ], 
-             color = "black", size = 4, shape = 24) +
-  geom_point(data = weather.highrains[high_max.D, ], 
-             color = "black", size = 4, shape = 23) +
-  geom_hline(yintercept = c(-2, 2), linetype = "dashed", size = 1) +
-  geom_hline(yintercept = c(-3, 3), linetype = "dotted", size = 1) +
-  labs(title = "Standardized deviance residuals vs linear predictor",
-       color = "Y") +
-  xlab("Linear predictor") +
-  ylab("Standardised deviance") +
-  theme(text = element_text(size = 14))
-
-)
-ggsave(filename = "project2/plots/mod2abw_devstd.png", plot = plt.devstd)
-
-
-
-
-## Estimate prob and logit ####
-(Y <- sum(weather$drymonth == 1))
-(n <- nrow(weather))
-
-(p <- Y/n)
-(odds <- p/(1-p))
-(lo <- log(odds))
-
-
-## Fit null model ####
-(mod_0 <- glm(drymonth ~ 1, family = "binomial", data = weather))
-
-
-## Estimate CIs ####
-(lambda <- qnorm(1 - 0.05/2))
-
-(dp <- sqrt(p*(1-p)/n))
-(p.lwr <- p - lambda*dp )
-(p.upr <- p + lambda*dp )
-
-(dlo <- sqrt(1/Y + 1/(n-Y)))
-(lo.lwr <- lo - lambda*dlo )
-(lo.upr <- lo + lambda*dlo )
-
-(ci.lo <- confint(mod_0))
-(ci.o <- exp(ci.lo))
-(ci.p <- ci.o / (1+ci.o))
-
-## Lowrain as first quantile ####
-(Q1 <- quantile(weather$rain, 0.25))
-weather$lowrain <- as.numeric(weather$rain < Q1)
-weather$low_cat <- factor(weather$lowrain,
-                          levels = c(0, 1),
-                          labels = c("high", "low"))
-
-## Relationship between location and lowraint ####
-
-(tab <- table(weather$location, weather$low_cat))
-
-# compute stuff here
-
-## Fit model with location and get CI ####
-
-table(weather$location)
-# weather$location <- relevel(weather$location, "Katterjåkk") # not needed, since Katterjåkk is already a refernce variable
-(mod_1 <- glm(lowrain ~ location, family = "binomial", data = weather))
-
-(ci.beta <- confint(mod_1))
-exp(mod_1$coefficients)
-(ci.or <- exp(ci.beta))
-summary(mod_1)$coefficients[, "Std. Error"]
-
-
-## Plot lowerain against pressure ####
-(plt.lowraingeom <-
-  ggplot(weather, aes(pressure, lowrain)) +
-    geom_point() +
-    geom_smooth() +
-    xlab("Pressure (hPa)") +
-    ylab("Low rain") +
-    labs(title = "Low rain (=1) or Not low rain (=0) vs Pressure") +
+## Plot all the curves, in different colors####
+(plt.rocs <-
+    ggplot(roc.df, aes(specificity, sensitivity, color = model)) +
+    geom_path(size = 1) +
+    coord_fixed() +       # square plotting area
+    scale_x_reverse() +   # Reverse scale on the x-axis!
+    labs(title = "ROC-curves for all the models") +
     theme(text = element_text(size = 14))
 )
 
+ggsave(filename = "project2/plots/rocs.png", plot = plt.rocs)
 
-ggsave(filename = "project2/plots/lowraingeom.png", plot = plt.lowraingeom)
+##All models####
+(aucs <- 
+   data.frame(
+     model = c( "1", "2", "fw", "bw"),
+     auc = c(auc(roc.1), auc(roc.2), auc(roc.fw), auc(roc.bw)),
+     lwr = c(ci(roc.1)[1], ci(roc.2)[1],
+             ci(roc.fw)[1], ci(roc.bw)[1]),
+     upr = c(ci(auc(roc.1))[3], ci(auc(roc.2))[3],
+             ci(auc(roc.fw))[3], ci(auc(roc.bw))[3])))
 
-## Fit model with airpressure ####
+## Compare AUC for the models####
+roc.test(roc.1, roc.bw)
+roc.test(roc.2, roc.bw)
+roc.test(roc.fw, roc.bw)
 
-(mod_2 <- glm(lowrain ~ pressure, family = "binomial", data = weather))
+## Find optimal parameter #### 
 
-(ci.beta <- confint(mod_2))
-exp(mod_2$coefficients)
-(ci.or <- exp(ci.beta))
+ggroc(roc.bw) +
+  geom_abline(intercept = 1, slope = 1, linetype = "dashed") +
+  coord_fixed() +
+  labs(title = "ROC-curve for model 3")
 
-(sum2 <- summary(mod_2))
+##Find best sens-spec####
+### Experiment with different values####
+# of levels for sens and spec, level.ss, to find
+# the one that gives the optimal combination of sens and spec.
+#level.ss <- 0.635
+level.ss <- 0.25
+roc.df.bw[roc.df.bw$sensitivity > level.ss & 
+           roc.df.bw$specificity > level.ss, ]
+##find the rownumber:
+(I_max.bw <- which(roc.df.bw$sensitivity > level.ss & 
+                    roc.df.bw$specificity > level.ss))
+roc.df.bw[I_max.bw, ]
+### Pick out the corresponding threshold for p####
+roc.df.bw[I_max.bw, "threshold"]
 
-## compare the fitted model with Null model using the summary output ####
-(D_diff <- sum2$null.deviance - sum2$deviance)
-(df_diff <- sum2$df.null - sum2$df.residual)
 
-###chi2-quantile to compare D_diff with####
-qchisq(1 - 0.05, df_diff)
-### or P-value####
-pchisq(D_diff, df_diff, lower.tail = FALSE)
+pred.sort <- pred.phat[order(pred.phat$p.bw), ]
+pred.sort$rank <- seq(1, nrow(pred.sort))
+head(pred.sort)
 
+# Divide the n=500 observations into g=10 groups:
+n <- nrow(pred.sort)
+g <- 10
+# with ng = 50 observations each:
+ng <- n/g
 
-## Compute the relative change ####
-
-
-## Create the plot with CI ####
-
-weather.pred <- cbind(
-  weather,
-  phat = predict(mod_2, type = "response"))
-
-ggplot(weather.pred, aes(pressure, lowrain)) +
+# Plot p_i and Y_i
+# Add i vertical jitter to Y_i to separate them
+ggplot(pred.sort, aes(rank, p.bw)) +
   geom_point() +
-  geom_smooth(se = FALSE, linetype = "dashed") +
-  geom_line(aes(y = phat), color = "red", size = 1) +
-  xlab("Pressure (hPa)") +
-  ylab("Low rain") +
-  labs(title = "Low rain (=1) or Not low rain (=0) vs Pressure",
-       caption = "red = fitted line, blue dashed = moving average") +
+  geom_jitter(aes(y = lowrain), height = 0.01) +
+  geom_vline(xintercept = seq(ng, nrow(pred.sort) - ng, ng)) +
+  labs(title = "Model 3: Estimated probabilities by increasing size",
+       caption = "g = 10 groups",
+       x = "(i) = 1,...,n", y = "p-hat") +
   theme(text = element_text(size = 14))
 
-## logit####
-# = logodds with s.e. for constructing C.I.
-weather.pred <- cbind(
-  weather.pred,
-  logit = predict(mod_2, se.fit = TRUE))
-head(weather.pred)
-# An unnecessary variable:
-weather.pred$logit.residual.scale <- NULL
-
-## CI for logit (Wald)####
-# Wald ok here since we do not want to test 
-# and there is no feasible alternative method!
-# Standard normal quantile:
-(lambda <- qnorm(1 - 0.05/2))
-weather.pred$logit.lwr <- weather.pred$logit.fit - lambda*weather.pred$logit.se.fit
-weather.pred$logit.upr <- weather.pred$logit.fit + lambda*weather.pred$logit.se.fit
-head(weather.pred)
-
-## CI for odds####
-weather.pred$odds.lwr <- exp(weather.pred$logit.lwr)
-weather.pred$odds.upr <- exp(weather.pred$logit.upr)
-head(weather.pred)
-
-## CI for p####
-weather.pred$p.lwr <- weather.pred$odds.lwr/(1 + weather.pred$odds.lwr)
-weather.pred$p.upr <- weather.pred$odds.upr/(1 + weather.pred$odds.upr)
-head(weather.pred)
-
-## plot intervals####
-( 
-  mod1c.plotint <- 
-    ggplot(weather.pred, aes(pressure, lowrain)) +
-      geom_point() +
-      geom_line(aes(y = phat), color = "red", size = 1) +
-      geom_ribbon(aes(ymin = p.lwr, ymax = p.upr), alpha = 0.2) +
-      xlab("Pressure (hPa)") +
-      ylab("Low rain") +
-      labs(title = "Low rain (=1) or Not low rain (=0) vs Pressure",
-           caption = "red = fitted line, with 95% confidence interval") +
-      theme(text = element_text(size = 14))
-)
-
-ggsave(filename = "project2/plots/mod1c_plotint.png", plot = mod1c.plotint)
-
-## Calculate Leverage####
-weather.pred <- cbind(weather,
-                   xb = predict(mod_2),
-                   v = influence(mod_2)$hat)
-head(weather.pred)
 
 
-### plot leverage against pressure ####
-(plot.v <- ggplot(weather.pred, aes(pressure, v)) + 
-   geom_point() +
-   geom_hline(yintercept = 2*length(mod_2$coefficients)/nrow(weather), 
-              color = "red", size = 1) +
-   labs(title = "Leverage vs pressure, by Y=0 or Y=1",
-        caption = "2(p+1)/n in red") +
-   xlab("Pressure (hPa)") +
-   ylab("Leverage") +
-   ylim(-0.0001, 0.0062)+
-   theme(text = element_text(size = 14))
- )
+## HL using hoslem.test####
+###Model 3####
+# p+1:
+length(bwmodel$coefficients)
+# so we need g > 3
+g = 22
+# while the smallest expected value is at least approx 5:
+# Allowing 4 here and have experimented with g:
+(HL.3 <- hoslem.test(pred.sort$lowrain, pred.sort$p.bw, g = g))
+HL.3$expected
+# All yhat0- and yhat1-values should be at least approx 5.
 
-ggsave(filename = "project2/plots/mod1c_leverage.png", plot = plot.v)
+# Collect the data in a useful form for plotting:
+(HL.df.3 <- data.frame(group = seq(1, g),
+                       Obs0 = HL.3$observed[, 1],
+                       Obs1 = HL.3$observed[, 2],
+                       Exp0 = HL.3$expected[, 1],
+                       Exp1 = HL.3$expected[, 2]))
 
-
-# #AIC and BIC####
-(mod_01 <- glm(lowrain ~ 1, family = "binomial", data = weather))
-
-aic <- AIC(mod_01, mod_1, mod_2)
-bic <- BIC(mod_01, mod_1, mod_2)
-(collect.AIC <- data.frame(aic, bic))
-
-# model 3: with cars and zerodiff is the best (BIC)
-
-# Pseudo R2####
-# Null model: ln L(b0)
-logLik(mod_01)
-(lnL0 <- logLik(mod_01)[1])
-
-(R2CS.max <- 1 - (exp(lnL0))^(2/nrow(weather)))
-# Collect the log likelihoods L(betahat)
-collect.AIC$loglik <- 
-  c(logLik(mod_01)[1],
-    logLik(mod_1)[1],
-    logLik(mod_2)[1])
-##R2_McF####
-collect.AIC$R2McF <- 1 - collect.AIC$loglik/lnL0
-##R2_McF,adj.####
-# Note that p+1 = df (and df.1):
-( collect.AIC$R2McF.adj <- 1 - (collect.AIC$loglik - (collect.AIC$df - 1)/2)/lnL0 )
+ggplot(HL.df.3, aes(x = group)) +
+  geom_line(aes(y = Obs0, linetype = "observed", color = "Y = 0"), size = 1) +
+  geom_line(aes(y = Obs1, linetype = "observed", color = "Y = 1"), size = 1) +
+  geom_line(aes(y = Exp0, linetype = "expected", color = "Y = 0"), size = 1) +
+  geom_line(aes(y = Exp1, linetype = "expected", color = "Y = 1"), size = 1) +
+  labs(title = "Model 3: Observed and expected in each group",
+       y = "number of observations") +
+  scale_x_continuous(breaks = seq(1, g)) +
+  theme(text = element_text(size = 14))
 

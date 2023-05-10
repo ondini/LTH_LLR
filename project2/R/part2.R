@@ -154,19 +154,17 @@ ggplot(weather.pred, aes(xb, devstd, color = low_cat)) +
 ggsave(filename = "project2/plots/mod2abw_devstd.png", plot = plt.devstd)
 
 
-
-
-## Estimate prob and logit ####
-(Y <- sum(weather$drymonth == 1))
-(n <- nrow(weather))
-
-(p <- Y/n)
-(odds <- p/(1-p))
-(lo <- log(odds))
-
-
-## Fit null model ####
-(mod_0 <- glm(drymonth ~ 1, family = "binomial", data = weather))
+# ## Estimate prob and logit ####
+# (Y <- sum(weather$lowrain == 1))
+# (n <- nrow(weather))
+# 
+# (p <- Y/n)
+# (odds <- p/(1-p))
+# (lo <- log(odds))
+# 
+# 
+# ## Fit null model ####
+# (mod_0 <- glm(lowrain ~ 1, family = "binomial", data = weather))
 
 
 ## Estimate CIs ####

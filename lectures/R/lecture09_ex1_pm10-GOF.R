@@ -11,7 +11,7 @@ library(ResourceSelection)
 
 # The PM10-data again####
 
-load("Data/pm10.rda")
+load("lectures/data/pm10.rda")
 
 # Refit the models from Lecture 8####
 model.0 <- glm(highpm10 ~ 1, family = "binomial", data = pm10)
@@ -46,6 +46,7 @@ head(pred.phat)
 
 pred.phat$yhat.3 <- as.numeric(pred.phat$p.3 > 0.5)
 pred.phat$yhat.oslo <- as.numeric(pred.phat$p.oslo > 0.5)
+head(pred.phat)
 
 (row.01 <- table(pm10$highpm10))
 
