@@ -32,7 +32,7 @@ var(rain.df$rain)
 
 ###Expected frequencies for Poisson ####
 rain.dfp <- rain.df
-rain.dfp$prob <- dpois(rain.dfp$rain, mu)
+rain.dfp$prob <- dpois(rain.dfp$rain, mu-40 )
 rain.dfp$model <- "Poisson"
 rain.dfp
 
@@ -41,7 +41,7 @@ rain.dfpf <- rbind(rain.df, rain.dfp)
 ###Plot observed and expected for Poisson ####
 ggplot(rain.dfpf, aes(rain, prob, fill = model)) +
   geom_col(position = "dodge") +
-  labs(title = "Distribution of   geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +rain amount",
+  labs(title = "Distribution of rain amount vs poisson",
        x = "rain amount",
        y = "relative frequency") +
   theme(text = element_text(size = 18))
@@ -49,7 +49,7 @@ ggplot(rain.dfpf, aes(rain, prob, fill = model)) +
 
 ###Expected frequencies for NegBin ####
 rain.dfnb <- rain.df
-rain.dfnb$prob <- dnbinom(rain.dfnb$rain, mu = mu, size = 4.763)
+rain.dfnb$prob <- dnbinom(rain.dfnb$rain, mu = mu-40, size = 4.923)
 rain.dfnb$model <- "Negative binomial"
 rain.dfnb
 
@@ -58,7 +58,7 @@ rain.dfnbf <- rbind(rain.df, rain.dfnb)
 ### Plot observed and expected for Negbin ####
 ggplot(rain.dfnbf, aes(rain, prob, fill = model)) +
   geom_col(position = "dodge") +
-  labs(title = "Distribution of   geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +  geom_line(aes(y = muhat), linewidth = 1) +rain amount",
+  labs(title = "Distribution of rain amount vs negbin",
        x = "rain amount",
        y = "relative frequency") +
   theme(text = element_text(size = 18))
@@ -87,7 +87,7 @@ BIC(bwmodelp)
 
 
 
-### Poisson regression simple  model####
+### Poisson regression simple models ####
 (simpmodel <- glm(rain_integer ~ location + speed, family = "poisson", data = weather))
 (simpmodel.sum <- summary(simpmodel))
 BIC(simpmodel)
@@ -106,10 +106,10 @@ BIC(compmodel)
 
 ## Show fit quality for selected Poisson model ####
 
-model.weather <- simpmodel
+model.weather <- bwmodelp
 
-cbind(summary(model.weather)$coefficients, ci = confint(model.weather))
-cbind(exp(model.weather$coefficients), exp(confint(model.weather)))
+# cbind(summary(model.weather)$coefficients, ci = confint(model.weather))
+# cbind(exp(model.weather$coefficients), exp(confint(model.weather)))
 
 
 ## Estimated mu with confidence interval using xbeta####
@@ -177,7 +177,9 @@ pchisq(model.noloc$deviance - model.weather$deviance,
 infl.weather <- influence(model.weather)
 pred.weather$v <- infl.weather$hat
 pred.weather$devres <- infl.weather$dev.res
+pred.weather$pears <- infl.weather$pear.res
 pred.weather$std.devres <- pred.weather$devres/sqrt(1 - pred.weather$v)
+pred.weather$std.pearres <- pred.weather$devres/sqrt(1 - pred.weather$v)
 pred.weather$D <- cooks.distance(model.weather)
 
 ##Leverage####
@@ -210,6 +212,18 @@ ggplot(pred.weather, aes(speed, D, color = location)) +
   theme(text = element_text(size = 18)) +
   facet_wrap(~ location)
 
+###Residual plot for poiss####
+ggplot(pred.weather, aes(x = xb.fit, color = location)) +
+  geom_point(aes(y = std.devres), size = 2) +
+  geom_hline(yintercept = c(-3, -2, 0, 2, 3), 
+             linetype = 2, size = 1) +
+  expand_limits(y = c(-4.5, 7.5)) +
+  labs(y = "std dev.res", x = "xb", color = "location",
+       title = "Rain: Poiss model") +
+  theme(text = element_text(size = 18))
+
+
+
 
 ## Fit negBin models #### 
 
@@ -226,15 +240,14 @@ fwmodeln <- step(nullmodn, scope = list(lower=nullmodn,upper=fullmodn),
                 direction="both", criterion = "BIC",  k = log(nrow(weather)))
 (fwmodeln.sum <- summary(fwmodeln))
 BIC(fwmodeln)
-
-(1 - (fwmodeln.sum$deviance + 22)/fwmodeln.sum$null.deviance)
+(1 - (fwmodeln.sum$deviance + 21)/fwmodeln.sum$null.deviance)
 
 
 bwmodeln <- step(fullmodn, scope = list(lower=nullmodn,upper=fullmodn),
                 direction="both", criterion = "BIC",  k = log(nrow(weather)))
 (bwmodeln.sum <- summary(bwmodeln))
 BIC(bwmodeln)
-(1 - (fwmodeln.sum$deviance + 28)/fwmodeln.sum$null.deviance)
+(1 - (bwmodeln.sum$deviance + 27)/bwmodeln.sum$null.deviance)
 
 
 # Fit a negbin model####
@@ -248,7 +261,7 @@ BIC(simplemodn1)
 BIC(simpmodeln2)
 (1 - (simpmodeln2.sum$deviance + 5)/simpmodeln2.sum$null.deviance)
 
-(compmodeln <- glm(rain_integer ~ location + pressure*speed + monthnr, family = "poisson", data = weather))
+(compmodeln <- glm.nb(rain_integer ~ location + pressure*speed + monthnr, data = weather))
 (compmodeln.sum <- summary(compmodeln))
 BIC(compmodeln)
 (1 - (compmodeln.sum$deviance + 17)/compmodeln.sum$null.deviance)
@@ -256,7 +269,7 @@ BIC(compmodeln)
 
 ## Show fit quality for selected Negbin model ####
 
-model.nb <- simplemodn1
+model.nb <- bwmodeln
 cbind(model.nb$coefficients, confint(model.nb))
 exp(cbind(model.nb$coefficients, confint(model.nb)))
 
@@ -314,6 +327,7 @@ ggplot(pred.nb, aes(pressure, rain_integer, color = location)) +
 ##With standardized deviance residuals####
 # for the two models.
 pred.nb$devres <- influence(model.nb)$dev.res/sqrt(1 - influence(model.nb)$hat)
+pred.nb$pearres <- influence(model.nb)$pear.res/sqrt(1 - influence(model.nb)$hat)
 
 ###Residual plot for negbin####
 ggplot(pred.nb, aes(x = xb.fit, color = location)) +
@@ -322,7 +336,7 @@ ggplot(pred.nb, aes(x = xb.fit, color = location)) +
              linetype = 2, size = 1) +
   expand_limits(y = c(-4.5, 7.5)) +
   labs(y = "std dev.res", x = "xb", color = "location",
-       title = "Raín: Negbin model") +
+       title = "Rain: Negbin model") +
   theme(text = element_text(size = 18))
 
 
@@ -376,15 +390,38 @@ ggplot(pred.weather, aes(speed, D, color = location)) +
   theme(text = element_text(size = 18)) +
   facet_wrap(~ location)
 
-##With Likelihood ratio test####
-# Do NOT use "anova" as that tests two models following 
-# the same distributions but this is not our case. 
-# Hence I compute everything "by hand".
 
--2*logLik(model.pois)
+## Compare the models ####
+
+### Likelihood test ####
+-2*logLik(model.weather)
 -2*logLik(model.nb)
 
-(D_diff <- -2*logLik(model.pois)[1] + 2*logLik(model.nb)[1])
+(D_diff <- -2*logLik(model.weather)[1] + 2*logLik(model.nb)[1])
 qchisq(1 - 0.05, 1)
 pchisq(D_diff, 1, lower.tail = FALSE)
+
+### Deviance residuals ####
+data <- data.frame(
+  Residuals = c(pred.nb$devres, pred.weather$devres),
+  Model = c(rep("NegBin", length(pred.nb$devres)), rep("Poiss", length(pred.weather$devres)))
+)
+
+ggplot(data, aes(x = Residuals, fill = Model)) +
+  geom_histogram(alpha = 0.5, position = "identity", bins = 20) +
+  labs(title = "Standardized Devres Comparison", x = "Devres", y = "Frequency") +
+  theme_minimal() +
+  scale_fill_manual(values = c("blue", "red"))
+
+### Pearson residuals ####
+data <- data.frame(
+  Residuals = c(pred.nb$devres, pred.weather$devres),
+  Model = c(rep("NegBin", length(pred.nb$devres)), rep("Poiss", length(pred.weather$devres)))
+)
+
+ggplot(data, aes(x = Residuals, fill = Model)) +
+  geom_histogram(alpha = 0.5, position = "identity", bins = 20) +
+  labs(title = "Standardized Pearson Comparison", x = "Pearres", y = "Frequency") +
+  theme_minimal() +
+  scale_fill_manual(values = c("blue", "red"))
 
